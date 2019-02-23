@@ -1,0 +1,36 @@
+Lessons from crackme
+
+
+
+
+
+
+Radare2 
+	-In radare2, a register was called [s]. ex. mov eax, dword [s]  -- confusing becuase i thought it was a string but its just a register named s 
+
+
+LEA
+	lea passes the memory address from the origin to the destination
+
+
+
+loops in Radare2
+	If vs. While Loop
+		An If statement is a check without a loop while a while statement is a check with a loop
+	
+	The condition for a loop is in the box above the t/f
+
+
+	
+
+Using scanf with int is different than with char
+	https://computer.howstuffworks.com/c7.htm
+
+
+
+
+
+
+Questions:
+	Where does the buffer exist in memory? 
+	

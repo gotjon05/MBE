@@ -1,0 +1,204 @@
+"function that suspiciously looks like a goodboy/badboy one"
+
+
+
+
+Walking through disassembly
+
+
+
+
+
+
+setup:
+	s sym.main
+	pd 30
+	set breakpoint after scanf
+		0x080484da      e851feffff     call sym.imp.scanf        
+		0x080484df b    c745f85a0000.  mov dword [local_8h], 0x5a
+
+
+SYM.MAIN
+Moving down the crackme0x03 binary from the address after scanf in main()
+1. 
+mov dword [local_8h], 0x5a  
+mov dword [local_ch], 0x1ec 
+
+immediate value 0x5a is stored in local variable local_8h 
+immediate value 0x1ec is stored in local variable local_ch
+
+Switching from visual mode by typing afvd to view local variables -- we are able to see the changes one step at time 
+:> afvd
+var local_4h = 0xffd6ad04  0xf7ec5000 
+var local_8h = 0xffd6ad00  0x0000005a 
+var local_ch = 0xffd6acfc  0x000001ec 
+
+
+2. mov edx, dword [local_ch]
+
+edx now stores immediate value 0x000001ec-- visible in visual mode:  edx 0x000001ec 
+
+3. lea eax, [local_8h]
+the memory address of local variable [local_8h] is stored in register eax. EAX now points to the variable stored in local variable [local_8h]
+
+eax 0xffd6ad00 
+
+:> afvd
+var local_8h = 0xffd6ad00  0x0000005a
+
+the memory address of the local variable local_8h is 0xffd6ad00 and is now stored in register eax 
+
+4. 
+add dword [eax], edx   
+mov eax, dword [local_8h] 
+
+the value in the register edx is being added to the value pointed to by eax which is local_8h 
+edx = 0x000001ec
+[eax] points to local_8h with the value 0x0000005a
+
+the result of 0x000001ec + 0x0000005a is stored in eax 
+
+5. imul eax, dword [local_8h]   
+
+the product of local variable 8h storing 0x00000246 and eax storing 0x00000246 is 0x00052b24, stored in eax 
+multiplying the value local_8h with itself 
+
+6.   mov dword [local_ch], eax
+the local variable local_ch will change from its original value of 0x000001ec to 0x00052b24 that was stored in eax 
+
+7.  mov dword [local_4h_2], eax
+0x00052b24 is stored into local variable local_4h_2
+
+8. mov eax, dword [local_4h]
+assuming local_4h has user input that is now stored in eax 
+eax is now changed to 0xf7fad000
+
+9. mov dword [esp], eax     
+call sym.test            
+
+eax with user input is poped on the stack and used as an argument for function sym.test 
+user input is 0xf7eee000
+
+
+SYM.TEST
+
+Jumping into sym.test the registers remain the same with the exception of local variables
+
+10. mov eax, dword [arg_8h]
+local variable arg_8h stores 0xf7fad000, address of user input, which is moved into register EAX --- oddly, EAX already had this value 
+
+11.
+cmp eax, dword [arg_ch]
+je 0x804848a  
+
+the first check. Comparing arg_ch storing 0x00052b24, the product of mulitplication, with eax storing userinput 0xf7fad000. Jumps if equal. 
+
+Its not equal right now. so the program will not jump
+
+
+
+
+12.  mov dword [esp], str.Lqydolg_Sdvvzrug
+call sym.shift 
+
+Lqydolg_Sdvvzru is pushed to the top of stack is serves as an argument to the function sym.shift
+
+
+SYM.SHIFT
+
+13. mov dword [local_7ch], 0 
+local variable local_7ch has value 0 
+
+
+14. mov eax, dword [s]  --- contains address that points to string Lqydolg#Sdvvzrug$
+arg s = 0xffeb9200  0x080485ec
+:> ps @ 0x080485ec
+Lqydolg#Sdvvzrug$
+
+value of eax changes from 0xf7eee000 to address of string  --> 0x080485ec stored in register S
+
+:> pf S @ 0xffbe7880
+0xffbe7880 = 0xffbe7880 (address of arg S points to )-> 0x080485ec (address of string) 
+
+
+
+15. pushing address of arg s that points to address of string to the top of stack as argument for strlen
+mov dword [esp], eax      
+call sym.imp.strlen       
+
+
+16.
+cmp dword [local_7ch], eax
+jae 0x8048450             
+
+
+EAX store length from strlen which is  eax 0x00000011.
+
+----Jumps if eax, storing 11  is above or equal to local_7ch which is 0---
+11 >= 0 -- because it jumped, is it the opposite --- 0 >= 11
+
+0x080485ec is pushed to the top of the stack from register eax and used in strlen function
+
+
+The comparison was false? with eax = 11 and local_7ch with 0
+
+
+
+
+
+17.
+lea eax, [local_78h] 
+
+var local_78h = 0xffb9d260  0xf7f58e89
+eax = 0xffb9d260 
+
+
+18. 
+
+mov edx, eax         
+edx = 0xffb9d260  
+
+
+19.
+add edx, dword [local_7ch]
+
+local_7ch = 0x00000000
+edx = 0xffb9d260
+
+
+20.  mov eax, dword [local_7ch] 
+eax = 0
+
+21. add eax, dword [string_address]
+string address = 0x080485ec
+eax = 0x080485ec 
+
+22. 
+movzx eax, byte [eax]   
+
+eax = 0x0000004c
+
+
+23. 
+
+sub al, 3               
+eax = 0x00000049  
+
+24. 
+
+mov byte [edx], al  
+edx = 0xffb9d260
+
+25.  lea eax, [counter] 
+address of counter stored in eax 
+counter = var counter = 0xffb9d25c  0x00000000
+eax = 0xffb9d25c
+
+26.incrementing address that points to counter
+inc dword [eax]   
+
+counter incremented by one -->  0x00000001
+
+
+
+

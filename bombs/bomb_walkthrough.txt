@@ -1,0 +1,110 @@
+Resources
+	General knowledge of R2 static analysis
+		https://www.megabeets.net/a-journey-into-radare-2-part-1/
+
+Restarting the project
+	r2 -p bomb_labs bomb
+
+
+
+SYM.MAIN
+set break point to    0x08049535	mov dword [esp], str.e_100m__e_0m_e_90m_MENU_SELECTION:_
+
+
+1.
+sym.menu provides the graphics menu. After running from this breakpoint, the graphics appear
+	0x08049530      e817f5ffff     call sym.menu   
+     	db 0x08049535 	 -- mov dword [esp], str.e_100m__e_0m_e_90m_MENU_SELECTION:_
+
+
+2.
+Where the program takes user input for the wire color
+
+	0x08049541      a120c20408     mov eax, dword [obj.stdin]	reads string from stdin 
+	0x08049546      89442408       mov dword [var_8h_2], eax	
+	0x0804954a      c74424041400.  mov dword [var_4h], 0x14 	number of characters to be copied into str is 20 
+	0x08049552      8d45e4         lea eax, [var_1ch]       	characters from fgets are copied to var_1ch   
+	0x08049555      890424         mov dword [esp], eax     	
+	0x08049558      e8a7f1ffff     call sym.imp.fgets 		input for menu selection 
+	
+
+selection for yellow wire, 1 is stored in var_1ch 
+	var var_1ch = 0xff9d09dc  0x08000a31  1... @ecx
+
+
+
+3.
+The Check that determines if process goes to sym.yellow from sym.main 
+
+
+0x0804955d      c744240456a1.  mov dword [var_4h], 0x804a156 		1 is passed to var_4h
+0x08049565      8d45e4         lea eax, [var_1ch]        		eax = 0xff9d09dc (address of var var_1ch storing input 1 from previous fgets) 
+0x08049568      890424         mov dword [esp], eax      
+0x0804956b      e874f2ffff     call sym.imp.strcmp       
+0x08049570      85c0           test eax, eax     			comparing what was stored in var_1ch and jumping if eax = 0      
+0x08049572      7417           je 0x804958b              
+
+passes through loop, eax = 0 to sym.yellow
+
+
+
+SYM.YELLOW/SYM.YELLOW_PREFLIGHT: Puts user input into the buffer to be used later in sym.yellow
+4.
+Input for the password
+
+ 0x080496fa      a120c20408     mov eax, dword obj.stdin    
+ 0x080496ff      89442408       mov dword [var_8h], eax     
+ 0x08049703      c74424040a00.  mov dword [var_4h], 0xa     
+ 0x0804970b      c704244cc204.  mov dword [esp], obj.buffer 
+ 0x08049712      e8edefffff     call sym.imp.fgets          
+
+
+SYM.YELLOW: The check on the user entered PW
+
+5. The first check, jumping to 0x804977c leads to segfault.   
+I need to pass an int of 0x38 into the buffer
+
+
+Each hexadecimal digit represents four binary digits, also known as a nibble, which is half a byte.
+2 hexadecimal digits is a byte 
+
+
+Passing 88 leads to 0x38 -- brute forced it/got lucky 
+eax = 0x00000038
+
+
+
+0x08049724      0fb6054cc204.  movzx eax, byte [obj.buffer]		move with zero-extend
+0x0804972b      3c38           cmp al, 0x38                		compares the lower 8 bits with 0x38(55)
+0x0804972d      754d           jne 0x804977c				we dont want to jump, leads to segfault                
+
+
+
+
+
+
+
+
+sym.disarm_handler is before sym.yellow ---
+	After setting a breaking point where sym.disarm_handler returns in sym.main, i am prompted for the wire color and pw
+	
+
+
+
+
+
+
+
+
+
+Unclear what sym.yellow does, thought it provided check to disarm yellow wire based on strings
+
+	fs strings; f   ---> 0x0804a1f4 64 str.e_43m__e_0m_e_33m_UNLOCK_PASSWORD_1_ACCEPTED__LOCK_DISENGAGED_e_0m
+	axt 0x0804a1f4
+
+	axt @@ str.*
+		sym.yellow 0x804978b [DATA] mov dword [esp], str.e_43m__e_0m_e_33m_UNLOCK_PASSWORD_1_ACCEPTED__LOCK_DISENGAGED_e_0m
+
+
+XREF of sym.yellow is sym.main
+	

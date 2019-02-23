@@ -1,0 +1,17 @@
+
+
+
+For Loop-Goodboy/badboy
+	The Good boy/bad boy coming from the for loop confused me because i thought there would be an if statement before the for the loop. 
+	In this particular case, False led to for loop and True led to printf( str.Password_Incorrect ).I realized that instead of an if statement, the printf existed inside the function and just outside the 	   for loop. 
+
+
+Scanf
+	no need to reference parameter 
+
+
+Avoiding optimization that does not translate into C code 
+	Common case of registers being put into smaller registers ex. al, eax
+
+
+
